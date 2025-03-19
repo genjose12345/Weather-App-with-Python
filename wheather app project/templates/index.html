@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-cloud-sun"></i> Weather Dashboard</h1>
+            <p class="tagline">Real-time weather information for any location</p>
+        </header>
+
+        <main>
+            <section class="search-section">
+                <form method="POST" action="{{ url_for('index') }}" id="weather-form">
+                    <div class="search-container">
+                        <input type="text" id="location-search" name="location" placeholder="Type a city name like 'Dalton, Ohio' or any location..." required autocomplete="off">
+                        <button type="submit"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div class="search-help">
+                        <p>Popular searches: Dalton Ohio, New York, London, Paris, Tokyo</p>
+                        <div id="search-status">
+                            <!-- Status will be populated by JavaScript if there are issues -->
+                        </div>
+                    </div>
+                    <!-- Hidden fields for coordinates -->
+                    <input type="hidden" name="lat" id="lat-field" value="">
+                    <input type="hidden" name="lng" id="lng-field" value="">
+                </form>
+                {% if error %}
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i> {{ error }}
+                </div>
+                {% endif %}
+            </section>
+
+            {% if weather_data %}
+            <section class="weather-dashboard">
+                <div class="weather-card main-card">
+                    <div class="weather-header">
+                        <h2>{{ weather_data.city }}, {{ weather_data.country }}</h2>
+                        <p class="datetime">{{ weather_data.datetime }}</p>
+                    </div>
+                    
+                    <div class="weather-body">
+                        <div class="temperature-container">
+                            <div class="main-temperature">
+                                <span class="temperature">{{ weather_data.temperature }}</span>
+                                <span class="degree">°F</span>
+                            </div>
+                            <div class="temperature-details">
+                                <p>Feels like: {{ weather_data.feels_like }}°F</p>
+                                <p>Min: {{ weather_data.min_temp }}°F | Max: {{ weather_data.max_temp }}°F</p>
+                            </div>
+                        </div>
+
+                        <div class="weather-condition">
+                            <img src="https://openweathermap.org/img/wn/{{ weather_data.icon }}@2x.png" alt="{{ weather_data.description }}">
+                            <p class="condition">{{ weather_data.description }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="weather-cards">
+                    <div class="weather-card info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-wind"></i>
+                        </div>
+                        <div class="info-details">
+                            <h3>Wind</h3>
+                            <p>{{ weather_data.wind_speed }} mph</p>
+                            {% if weather_data.get('wind_direction') %}
+                            <p class="secondary-info">{{ weather_data.wind_direction }}</p>
+                            {% endif %}
+                            {% if weather_data.get('wind_gust') %}
+                            <p class="secondary-info">Gusts: {{ weather_data.wind_gust }} mph</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="weather-card info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-tint"></i>
+                        </div>
+                        <div class="info-details">
+                            <h3>Humidity</h3>
+                            <p>{{ weather_data.humidity }}%</p>
+                            {% if weather_data.get('dew_point') %}
+                            <p class="secondary-info">Dew point: {{ weather_data.dew_point }}°F</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="weather-card info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-compress-alt"></i>
+                        </div>
+                        <div class="info-details">
+                            <h3>Pressure</h3>
+                            <p>{{ weather_data.pressure }} hPa</p>
+                        </div>
+                    </div>
+
+                    <div class="weather-card info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        <div class="info-details">
+                            <h3>Sunrise & Sunset</h3>
+                            <p>{{ weather_data.sunrise }}</p>
+                            <p class="secondary-info">{{ weather_data.sunset }}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Additional weather cards -->
+                    <div class="weather-card info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="info-details">
+                            <h3>Visibility</h3>
+                            <p>{{ weather_data.visibility }} km</p>
+                        </div>
+                    </div>
+                    
+                    <div class="weather-card info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-cloud"></i>
+                        </div>
+                        <div class="info-details">
+                            <h3>Cloud Cover</h3>
+                            <p>{{ weather_data.clouds }}%</p>
+                        </div>
+                    </div>
+                    
+                    <!-- UV Index - Always display it with 0 as fallback -->
+                    <div class="weather-card info-card uv-card">
+                        <div class="info-icon">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        <div class="info-details">
+                            <h3>UV Index</h3>
+                            <p>
+                                <span class="uv-index 
+                                    {% if weather_data.get('uv_index', 0) < 3 %}uv-low
+                                    {% elif weather_data.get('uv_index', 0) < 6 %}uv-moderate
+                                    {% elif weather_data.get('uv_index', 0) < 8 %}uv-high
+                                    {% elif weather_data.get('uv_index', 0) < 11 %}uv-very-high
+                                    {% else %}uv-extreme{% endif %}">
+                                    UV: {{ weather_data.get('uv_index', 0) }}
+                                </span>
+                            </p>
+                            <p class="secondary-info">
+                                {% if weather_data.get('uv_index', 0) < 3 %}
+                                Low
+                                {% elif weather_data.get('uv_index', 0) < 6 %}
+                                Moderate
+                                {% elif weather_data.get('uv_index', 0) < 8 %}
+                                High
+                                {% elif weather_data.get('uv_index', 0) < 11 %}
+                                Very High
+                                {% else %}
+                                Extreme
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if weather_data.get('rain_1h') > 0 %}
+                    <div class="weather-card info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-cloud-rain"></i>
+                        </div>
+                        <div class="info-details">
+                            <h3>Precipitation</h3>
+                            <p>{{ weather_data.rain_1h }} mm</p>
+                            <p class="secondary-info">Last hour</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if weather_data.get('snow_1h') > 0 %}
+                    <div class="weather-card info-card">
+                        <div class="info-icon">
+                            <i class="fas fa-snowflake"></i>
+                        </div>
+                        <div class="info-details">
+                            <h3>Snow</h3>
+                            <p>{{ weather_data.snow_1h }} mm</p>
+                            <p class="secondary-info">Last hour</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="weather-background {% if weather_data.get('main') %}{{ weather_data.get('main').lower() }}{% endif %}"></div>
+            </section>
+            
+            {% if forecast_data %}
+            <section class="forecast-section">
+                <h2 class="forecast-heading">5-Day Forecast</h2>
+                <div class="forecast-container">
+                    {% for day in forecast_data %}
+                    <div class="forecast-card">
+                        <div class="forecast-day">{{ day.day_name }}</div>
+                        <div class="forecast-date">{{ day.date }}</div>
+                        <div class="forecast-icon">
+                            <img src="https://openweathermap.org/img/wn/{{ day.icon }}@2x.png" alt="{{ day.description }}">
+                        </div>
+                        <div class="forecast-temp">
+                            <span class="max-temp">{{ day.max_temp }}°</span>
+                            <span class="min-temp">{{ day.min_temp }}°</span>
+                        </div>
+                        <div class="forecast-desc">{{ day.description }}</div>
+                        
+                        <div class="forecast-feels-like">
+                            Feels like: {{ day.feels_like }}°F
+                        </div>
+                        
+                        <div class="forecast-details">
+                            <div class="forecast-detail">
+                                <i class="fas fa-wind"></i>
+                                <span>{{ day.wind_speed }} mph</span>
+                            </div>
+                            <div class="forecast-detail">
+                                <i class="fas fa-tint"></i>
+                                <span>{{ day.humidity }}%</span>
+                            </div>
+                            
+                            <!-- Always show UV index with default value of 0 -->
+                            <div class="forecast-detail">
+                                <i class="fas fa-sun"></i>
+                                <span class="uv-index 
+                                    {% if day.get('uv_index', 0) < 3 %}uv-low
+                                    {% elif day.get('uv_index', 0) < 6 %}uv-moderate
+                                    {% elif day.get('uv_index', 0) < 8 %}uv-high
+                                    {% elif day.get('uv_index', 0) < 11 %}uv-very-high
+                                    {% else %}uv-extreme{% endif %}">
+                                    UV: {{ day.get('uv_index', 0) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+            {% else %}
+            <section class="welcome-section">
+                <div class="welcome-content">
+                    <i class="fas fa-map-marker-alt welcome-icon"></i>
+                    <h2>Enter a location to get started</h2>
+                    <p>Search for any city to view detailed weather information including temperature, humidity, wind speed, and more.</p>
+                    <p>Try searching for cities like <a href="#" onclick="document.getElementById('location-search').value='Dalton, Ohio'; document.getElementById('weather-form').submit(); return false;">Dalton, Ohio</a>, 
+                    <a href="#" onclick="document.getElementById('location-search').value='New York'; document.getElementById('weather-form').submit(); return false;">New York</a>, or 
+                    <a href="#" onclick="document.getElementById('location-search').value='London'; document.getElementById('weather-form').submit(); return false;">London</a></p>
+                </div>
+            </section>
+            {% endif %}
+        </main>
+
+        <footer>
+            <p>Weather data provided by <a href="https://openweathermap.org/" target="_blank">OpenWeatherMap</a></p>
+            <p>Location search powered by <a href="https://opencagedata.com/" target="_blank">OpenCage Geocoding API</a></p>
+            <p>&copy; {{ current_year }} Weather Dashboard</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html> 
